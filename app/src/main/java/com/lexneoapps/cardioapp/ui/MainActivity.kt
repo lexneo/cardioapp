@@ -1,7 +1,8 @@
-package com.lexneoapps.cardioapp
+package com.lexneoapps.cardioapp.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.lexneoapps.cardioapp.R
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
