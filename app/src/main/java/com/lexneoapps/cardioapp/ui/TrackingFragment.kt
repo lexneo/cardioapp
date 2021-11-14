@@ -6,10 +6,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import com.lexneoapps.cardioapp.R
 import com.lexneoapps.cardioapp.databinding.FragmentTrackingBinding
+import com.lexneoapps.cardioapp.ui.viewmodels.MainViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
-
+@AndroidEntryPoint
 class TrackingFragment : Fragment(R.layout.fragment_run) {
 
 
@@ -18,6 +21,9 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
     // This property is only valid between onCreateView and
 // onDestroyView.
     private val binding get() = _binding!!
+
+    private val viewModel: MainViewModel by viewModels()
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
