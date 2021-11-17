@@ -3,12 +3,13 @@ package com.lexneoapps.cardioapp.db
 import android.graphics.Bitmap
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.lexneoapps.cardioapp.other.Constants
 
 
 @Entity(tableName = "cardio_table")
 data class Cardio(
     var img: Bitmap? = null,
-    var type: String = DbConstants.CARDIO_RUN,
+    var type: String = Constants.CARDIO_RUN,
     var timeStamp: Long = 0L,
     var avgSpeedInKMH: Float = 0f,
     var distanceInMeters: Int = 0,

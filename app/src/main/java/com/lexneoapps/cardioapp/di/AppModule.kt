@@ -3,7 +3,7 @@ package com.lexneoapps.cardioapp.di
 import android.content.Context
 import androidx.room.Room
 import com.lexneoapps.cardioapp.db.CardioDatabase
-import com.lexneoapps.cardioapp.db.DbConstants.CARDIO_DATABASE_NAME
+import com.lexneoapps.cardioapp.other.Constants.CARDIO_DATABASE_NAME
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
