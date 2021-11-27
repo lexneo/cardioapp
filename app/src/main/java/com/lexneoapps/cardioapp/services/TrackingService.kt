@@ -33,7 +33,12 @@ import com.lexneoapps.cardioapp.other.Constants.LOCATION_UPDATE_INTERVAL
 import com.lexneoapps.cardioapp.other.Constants.NOTIFICATION_CHANNEL_ID
 import com.lexneoapps.cardioapp.other.Constants.NOTIFICATION_CHANNEL_NAME
 import com.lexneoapps.cardioapp.other.Constants.NOTIFICATION_ID
+import com.lexneoapps.cardioapp.other.Constants.TIMER_UPDATE_INTERVAL
 import com.lexneoapps.cardioapp.ui.MainActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 typealias Polyline = MutableList<LatLng>
@@ -46,14 +51,20 @@ class TrackingService : LifecycleService() {
 
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
-    companion object{
+    private val timeRunInSeconds = MutableLiveData<Long>()
+
+
+    companion object {
+        val timeRunInMillies = MutableLiveData<Long>()
         val isTracking = MutableLiveData<Boolean>()
         val pathPoints = MutableLiveData<Polylines>()
     }
 
-    private fun postInitialValues(){
+    private fun postInitialValues() {
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
+        timeRunInSeconds.postValue(0L)
+        timeRunInMillies.postValue(0L)
     }
 
     override fun onCreate() {
@@ -74,10 +85,9 @@ class TrackingService : LifecycleService() {
                     if (isFirstRun) {
                         startForegroundService()
                         isFirstRun = false
-                    }else{
+                    } else {
                         Timber.d("Resuming service")
-                        startForegroundService()
-
+                        startTimer()
                     }
                 }
                 ACTION_PAUSE_SERVICE -> {
@@ -93,36 +103,67 @@ class TrackingService : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    private fun pauseService(){
-        isTracking.postValue(false)
+    private var isTimerEnabled = false
+    private var lapTime = 0L
+    private var timeRun = 0L
+
+    private var timeStarted = 0L
+    private var lastSecondTimeStamp = 0L
+
+    private fun startTimer() {
+
+        addEmptyPolyline()
+        isTracking.postValue(true)
+        timeStarted = System.currentTimeMillis()
+        isTimerEnabled = true
+        CoroutineScope(Dispatchers.Main).launch {
+            while (isTracking.value!!) {
+                //time difference between now and timeStarted
+                lapTime = System.currentTimeMillis() - timeStarted
+
+                timeRunInMillies.postValue(timeRun + lapTime)
+                if (timeRunInMillies.value!! >= lastSecondTimeStamp + 1000L) {
+                    timeRunInSeconds.postValue(timeRunInSeconds.value!! + 1)
+                    lastSecondTimeStamp += 1000L
+                }
+                delay(TIMER_UPDATE_INTERVAL)
+            }
+            timeRun += lapTime
+        }
     }
+
+    private fun pauseService() {
+        isTracking.postValue(false)
+        isTimerEnabled = false
+    }
+
     //using supressLint because user can't get to tracking service if he didn't give permission
     // in runFragment(previous fragment)
     @SuppressLint("MissingPermission")
-    private fun updateLocationTracking(isTracking: Boolean){
-        if (isTracking ){
-           val request = LocationRequest.create().apply {
-               interval = LOCATION_UPDATE_INTERVAL
-               fastestInterval = FASTEST_LOCATION_INTERVAL
-               priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-               maxWaitTime= 100
-           }
+    private fun updateLocationTracking(isTracking: Boolean) {
+        if (isTracking) {
+            val request = LocationRequest.create().apply {
+                interval = LOCATION_UPDATE_INTERVAL
+                fastestInterval = FASTEST_LOCATION_INTERVAL
+                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+                maxWaitTime = 100
+            }
             fusedLocationProviderClient.requestLocationUpdates(
-                    request,
+                request,
                 locationCallback,
                 Looper.getMainLooper()
             )
-        }else{
+        } else {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         }
     }
 
-    val locationCallback  = object : LocationCallback(){
+    val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             super.onLocationResult(result)
-            if (isTracking.value!!){
-                result?.locations?.let {locations ->
-                    for (location in locations ){
+            if (isTracking.value!!) {
+                result?.locations?.let { locations ->
+                    for (location in locations) {
                         addPathPoints(location)
                         Timber.d("New location ${location.latitude}, ${location.longitude}")
                     }
@@ -132,9 +173,9 @@ class TrackingService : LifecycleService() {
         }
     }
 
-    private fun addPathPoints(location: Location?){
+    private fun addPathPoints(location: Location?) {
         location?.let {
-            val position  = LatLng(location.latitude,location.longitude)
+            val position = LatLng(location.latitude, location.longitude)
             pathPoints.value?.apply {
                 last().add(position)
                 pathPoints.postValue(this)
@@ -149,7 +190,7 @@ class TrackingService : LifecycleService() {
 
     private fun startForegroundService() {
 
-        addEmptyPolyline()
+        startTimer()
         isTracking.postValue(true)
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE)

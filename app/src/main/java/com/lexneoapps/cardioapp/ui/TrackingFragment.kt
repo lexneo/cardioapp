@@ -19,6 +19,7 @@ import com.lexneoapps.cardioapp.other.Constants.ACTION_START_OR_RESUME_SERVICE
 import com.lexneoapps.cardioapp.other.Constants.MAP_ZOOM
 import com.lexneoapps.cardioapp.other.Constants.POLYLINE_COLOR
 import com.lexneoapps.cardioapp.other.Constants.POLYLINE_WIDTH
+import com.lexneoapps.cardioapp.other.TrackingUtility
 import com.lexneoapps.cardioapp.services.Polyline
 import com.lexneoapps.cardioapp.services.TrackingService
 import com.lexneoapps.cardioapp.ui.viewmodels.MainViewModel
@@ -39,7 +40,11 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
 
     private var map: GoogleMap? = null
 
+    private var curTimeInMIllies = 0L
+
     private val viewModel: MainViewModel by viewModels()
+
+
 
 
     override fun onCreateView(
@@ -81,6 +86,12 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
             pathPoints = it
             addLatestPolyline()
             moveCameraToUser()
+        })
+
+        TrackingService.timeRunInMillies.observe(viewLifecycleOwner, Observer {
+            curTimeInMIllies = it
+            val formattedTime = TrackingUtility.getFormattedStopWatchTime(curTimeInMIllies,true)
+            binding.tvTimer.text = formattedTime
         })
     }
 
