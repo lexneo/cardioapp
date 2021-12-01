@@ -10,13 +10,17 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.lexneoapps.cardioapp.R
 import com.lexneoapps.cardioapp.databinding.FragmentTrackingBinding
+import com.lexneoapps.cardioapp.db.Cardio
 import com.lexneoapps.cardioapp.other.Constants.ACTION_PAUSE_SERVICE
 import com.lexneoapps.cardioapp.other.Constants.ACTION_START_OR_RESUME_SERVICE
 import com.lexneoapps.cardioapp.other.Constants.ACTION_STOP_SERVICE
+import com.lexneoapps.cardioapp.other.Constants.CARDIO_RUN
 import com.lexneoapps.cardioapp.other.Constants.MAP_ZOOM
 import com.lexneoapps.cardioapp.other.Constants.POLYLINE_COLOR
 import com.lexneoapps.cardioapp.other.Constants.POLYLINE_WIDTH
@@ -25,6 +29,8 @@ import com.lexneoapps.cardioapp.services.Polyline
 import com.lexneoapps.cardioapp.services.TrackingService
 import com.lexneoapps.cardioapp.ui.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.*
+import kotlin.math.round
 
 @AndroidEntryPoint
 class TrackingFragment : Fragment(R.layout.fragment_run) {
@@ -41,14 +47,14 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
 
     private var map: GoogleMap? = null
 
-    private var curTimeInMIllies = 0L
+    private var curTimeInMillis = 0L
 
     private var menu: Menu? = null
 
+    private var weight = 80f
+
 
     private val viewModel: MainViewModel by viewModels()
-
-
 
 
     override fun onCreateView(
@@ -79,10 +85,15 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
             addAllPolylines()
         }
 
+        binding.btnFinishRun.setOnClickListener {
+            zoomToSeeWholeTrack()
+            endRunAndSaveToDb()
+        }
+
         subscribeToObservers()
     }
 
-    private fun subscribeToObservers(){
+    private fun subscribeToObservers() {
         TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             updateTracking(it)
         })
@@ -94,36 +105,36 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
         })
 
         TrackingService.timeRunInMillies.observe(viewLifecycleOwner, Observer {
-            curTimeInMIllies = it
-            val formattedTime = TrackingUtility.getFormattedStopWatchTime(curTimeInMIllies,true)
+            curTimeInMillis = it
+            val formattedTime = TrackingUtility.getFormattedStopWatchTime(curTimeInMillis, true)
             binding.tvTimer.text = formattedTime
         })
     }
 
-    private fun toggleRun(){
-        if (isTracking){
+    private fun toggleRun() {
+        if (isTracking) {
             menu?.getItem(0)?.isVisible = true
             sendCommandToService(ACTION_PAUSE_SERVICE)
-        }else{
+        } else {
             sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
         }
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
-        inflater.inflate(R.menu.toolbar_tracking_menu,menu)
+        inflater.inflate(R.menu.toolbar_tracking_menu, menu)
         this.menu = menu
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
         super.onPrepareOptionsMenu(menu)
-        if (curTimeInMIllies>0){
+        if (curTimeInMillis > 0) {
             this.menu?.getItem(0)?.isVisible = true
         }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when(item.itemId) {
+        when (item.itemId) {
             R.id.miCancelTracking -> {
                 showCancelTrackingDialog()
             }
@@ -151,12 +162,12 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
         findNavController().navigate(R.id.action_trackingFragment_to_runFragment)
     }
 
-    private fun updateTracking(isTracking: Boolean){
+    private fun updateTracking(isTracking: Boolean) {
         this.isTracking = isTracking
-        if (!isTracking){
+        if (!isTracking) {
             binding.btnToggleRun.text = "Start"
             binding.btnFinishRun.visibility = View.VISIBLE
-        }else{
+        } else {
             binding.btnToggleRun.text = "Stop"
             menu?.getItem(0)?.isVisible = true
 
@@ -173,6 +184,55 @@ class TrackingFragment : Fragment(R.layout.fragment_run) {
                     MAP_ZOOM
                 )
             )
+        }
+    }
+
+    private fun zoomToSeeWholeTrack() {
+        val bounds = LatLngBounds.Builder()
+        for (polyline in pathPoints) {
+            for (pos in polyline) {
+                bounds.include(pos)
+            }
+        }
+
+        map?.moveCamera(
+            CameraUpdateFactory.newLatLngBounds(
+                bounds.build(),
+                binding.mapView.width,
+                binding.mapView.height,
+                (binding.mapView.height * 0.05f).toInt()
+            )
+        )
+    }
+
+    private fun endRunAndSaveToDb() {
+        map?.snapshot { bmp ->
+            var distanceInMeters = 0
+            for (polyline in pathPoints) {
+                distanceInMeters += TrackingUtility.calculatePolylineLength(polyline).toInt()
+            }
+            val avgSpeed =
+                round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
+            val dateTimestamp = Calendar.getInstance().timeInMillis
+            val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
+            val run = Cardio(
+                bmp,
+                CARDIO_RUN,
+                dateTimestamp,
+                avgSpeed,
+                distanceInMeters,
+                curTimeInMillis,
+                caloriesBurned
+            )
+            viewModel.insertCardio(run)
+            //using rootView because app will crash if view is from trackingfragment when we navigate
+            //back to runfragment afters this saving cardio
+            Snackbar.make(
+                requireActivity().findViewById(R.id.rootView),
+                "Run saved successfully",
+                Snackbar.LENGTH_LONG
+            ).show()
+            stopRun()
         }
     }
 
