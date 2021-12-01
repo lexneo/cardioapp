@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -23,6 +24,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.lexneoapps.cardioapp.R
 import com.lexneoapps.cardioapp.adapters.CardioAdapter
 import com.lexneoapps.cardioapp.databinding.FragmentRunBinding
+import com.lexneoapps.cardioapp.other.SortType
 import com.lexneoapps.cardioapp.ui.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -75,7 +77,32 @@ class RunFragment : Fragment(R.layout.fragment_run) {
 
         setUpRecyclerView()
 
-        viewModel.cardioSortedByDate.observe(viewLifecycleOwner, Observer {
+        when(viewModel.sortType){
+
+            SortType.DATE -> binding.spFilter.setSelection(0)
+            SortType.RUNNING_TIME -> binding.spFilter.setSelection(1)
+            SortType.DISTANCE -> binding.spFilter.setSelection(2)
+            SortType.AVG_SPEED -> binding.spFilter.setSelection(3)
+            SortType.CALORIES_BURNED -> binding.spFilter.setSelection(4)
+        }
+
+        binding.spFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
+            override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                when(pos){
+                    0 -> viewModel.sortCardio(SortType.DATE)
+                    1 -> viewModel.sortCardio(SortType.RUNNING_TIME)
+                    2 -> viewModel.sortCardio(SortType.DISTANCE)
+                    3 -> viewModel.sortCardio(SortType.AVG_SPEED)
+                    4 -> viewModel.sortCardio(SortType.CALORIES_BURNED)
+                }
+            }
+
+            override fun onNothingSelected(p0: AdapterView<*>?) {
+            }
+
+        }
+
+        viewModel.cardios.observe(viewLifecycleOwner, Observer {
             cardioAdapter.submitList(it)
         })
         binding.fab.setOnClickListener {
