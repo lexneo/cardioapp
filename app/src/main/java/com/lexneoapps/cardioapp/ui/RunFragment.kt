@@ -16,9 +16,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.lexneoapps.cardioapp.R
+import com.lexneoapps.cardioapp.adapters.CardioAdapter
 import com.lexneoapps.cardioapp.databinding.FragmentRunBinding
 import com.lexneoapps.cardioapp.ui.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -29,6 +32,8 @@ class RunFragment : Fragment(R.layout.fragment_run) {
 
 
     private var _binding: FragmentRunBinding? = null
+
+    private lateinit var cardioAdapter: CardioAdapter
 
     // This property is only valid between onCreateView and
 // onDestroyView.
@@ -68,12 +73,20 @@ class RunFragment : Fragment(R.layout.fragment_run) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setUpRecyclerView()
+
+        viewModel.cardioSortedByDate.observe(viewLifecycleOwner, Observer {
+            cardioAdapter.submitList(it)
+        })
         binding.fab.setOnClickListener {
-
-         startRun()
-
-
+            startRun()
         }
+    }
+
+    private fun setUpRecyclerView() = binding.rvRuns.apply {
+        cardioAdapter = CardioAdapter()
+        adapter = cardioAdapter
+        layoutManager = LinearLayoutManager(requireContext())
     }
 
     private fun startRun() {
@@ -95,9 +108,10 @@ class RunFragment : Fragment(R.layout.fragment_run) {
 
     private fun requestPermission() {
 
-        val permissionsToRequest =   mutableListOf<String>(
+        val permissionsToRequest = mutableListOf<String>(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION)
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
 
 
         when {

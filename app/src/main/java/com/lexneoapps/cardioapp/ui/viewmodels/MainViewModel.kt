@@ -13,6 +13,7 @@ class MainViewModel @Inject constructor(
     private val cardioDao: CardioDao
 ) : ViewModel() {
 
+    val cardioSortedByDate = cardioDao.getAllCardioSortedByDate()
 
     fun insertCardio(cardio : Cardio) = viewModelScope.launch {
         cardioDao.insertCardio(cardio)
