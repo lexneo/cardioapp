@@ -10,4 +10,11 @@ class StatisticsViewModel @Inject constructor(
     private val cardioDao: CardioDao
 ) : ViewModel() {
 
+    val totalTimeRun = cardioDao.getTotalTimeInMillis()
+    val totalDistance = cardioDao.getTotalDistance()
+    val totalCaloriesBurned = cardioDao.getTotalCaloriesBurned()
+    val totalAvgSpeed = cardioDao.getTotalAvgSpeed()
+
+    val runsSortedByDate = cardioDao.getAllCardioSortedByDate()
+
 }

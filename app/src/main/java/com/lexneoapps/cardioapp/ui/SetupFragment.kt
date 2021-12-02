@@ -19,7 +19,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SetupFragment : Fragment(R.layout.fragment_run) {
+class SetupFragment : Fragment(R.layout.fragment_setup) {
 
 
     private var _binding: FragmentSetupBinding? = null
@@ -29,7 +29,7 @@ class SetupFragment : Fragment(R.layout.fragment_run) {
     private val binding get() = _binding!!
 
     @Inject
-     lateinit var sharedPref: SharedPreferences
+    lateinit var sharedPref: SharedPreferences
 
     @set:Inject
     var isFirstAppOpen = true
@@ -52,9 +52,9 @@ class SetupFragment : Fragment(R.layout.fragment_run) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        if(!isFirstAppOpen){
+        if (!isFirstAppOpen) {
             val navOptions = NavOptions.Builder()
-                .setPopUpTo(R.id.setupFragment,true)
+                .setPopUpTo(R.id.setupFragment, true)
                 .build()
             findNavController().navigate(
                 R.id.action_setupFragment_to_runFragment,
@@ -66,12 +66,14 @@ class SetupFragment : Fragment(R.layout.fragment_run) {
         binding.tvContinue.setOnClickListener {
 
             val success = writePersonalDataToSharedPref()
-            if (success){
+            if (success) {
                 val action = SetupFragmentDirections.actionSetupFragmentToRunFragment()
                 findNavController().navigate(action)
-            }else{
-                Snackbar.make(requireView(),
-                    "Please enter all the fields",Snackbar.LENGTH_SHORT )
+            } else {
+                Snackbar.make(
+                    requireView(),
+                    "Please enter all the fields", Snackbar.LENGTH_SHORT
+                )
                     .show()
             }
 

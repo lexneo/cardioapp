@@ -34,7 +34,7 @@ import javax.inject.Inject
 import kotlin.math.round
 
 @AndroidEntryPoint
-class TrackingFragment : Fragment(R.layout.fragment_run) {
+class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
 
     private var _binding: FragmentTrackingBinding? = null
