@@ -40,7 +40,6 @@ class MainActivity : AppCompatActivity() {
             ,R.id.statisticsFragment))
         setSupportActionBar(binding.toolbar)
 
-
         setupActionBarWithNavController(navController,appBarConfiguration)
         binding.bottomNavigationView.setupWithNavController(navController)
         navController.addOnDestinationChangedListener{
